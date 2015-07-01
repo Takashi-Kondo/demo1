@@ -1,0 +1,97 @@
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+var http = new splunkjs.ProxyHttp("/proxy");
+var service = new splunkjs.Service(http, {
+    username: username,
+    password: password,
+    scheme: scheme,
+    host: host,
+    port: port,
+    version: version
+});
+
+var Logger = splunkjs.Class.extend({
+    init: function(service, opts) {
+        this.service = service;
+        
+        opts = opts || {};
+        
+        this.params = {};
+        if (opts.index)      this.params.index      = opts.index;
+        if (opts.host)       this.params.host       = opts.host;
+        if (opts.source)     this.params.source     = opts.source;
+        if (opts.sourcetype) this.params.sourcetype = opts.sourcetype || "demo-logger";
+        
+        if (!this.service) {
+            throw new Error("Must supply a valid service");
+        }
+    },
+    
+    log: function(data) {
+        var message = {
+            __time: (new Date()).toUTCString(),
+            level: "LOG",
+            data: data
+        };
+        
+        this.service.log(message, this.params);
+        console.log(data);
+    },
+    
+    error: function(data) {
+        var message = {
+            __time: (new Date()).toUTCString(),
+            level: "ERROR",
+            data: data
+        };
+        
+        this.service.log(message, this.params);
+        console.error(data);
+    },
+    
+    info: function(data) {
+        var message = {
+            __time: (new Date()).toUTCString(),
+            level: "INFO",
+            data: data
+        };
+        
+        this.service.log(message, this.params);
+        console.info(data);
+    },
+    
+    warn: function(data) {
+        var message = {
+            __time: (new Date()).toUTCString(),
+            level: "WARN",
+            data: data
+        };
+        
+        this.service.log(message, this.params);
+        console.warn(data);
+    },
+});
+
+// First, we log in
+service.login(function(err, success) {
+    // We check for both errors in the connection as well
+    // as if the login itself failed.
+    if (err || !success) {
+        console.log("Login failure. Please check your server hostname and authentication credentials.");
+        done(err || "Login failed");
+        return;
+    } 
+    
+    // Create our logger
+    var logger = new Logger(service, { sourcetype: "mylogger", source: "test" });
+    
+    // Log the various types of messages. Note how we are sending
+    // both strings and JSON objects, which will be auto-encoded and
+    // understood by Splunk 4.3+
+    logger.log("I LOGGED TO SPLUNK - look at your JS console!");
+    logger.error("ERROR HAPPENED");
+    logger.info(["useful", "info"]);
+    logger.warn({"this": {"is": ["a", "warning"]}});
+    
+    // Say we are done with this sample.
+    done();
+});
